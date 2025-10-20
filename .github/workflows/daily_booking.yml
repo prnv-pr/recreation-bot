@@ -1,0 +1,58 @@
+name: Daily Tours Booking
+
+# This workflow runs hourly and the booking script checks the facility local time
+# and runs only when the hour matches DESIRED_LOCAL_HOUR.
+on:
+  schedule:
+    - cron: '0 * * * *'  # every hour on the hour
+  workflow_dispatch:
+
+jobs:
+  booking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright gspread oauth2client python-dotenv pytz
+          playwright install --with-deps
+
+      - name: Prepare env file
+        env:
+          GOOGLE_SA_JSON_B64: ${{ secrets.GOOGLE_SA_JSON_B64 }}
+          RECGOV_USERNAME: ${{ secrets.RECGOV_USERNAME }}
+          RECGOV_PASSWORD: ${{ secrets.RECGOV_PASSWORD }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          FACILITY_TZ: ${{ secrets.FACILITY_TZ }}
+          DESIRED_LOCAL_HOUR: ${{ secrets.DESIRED_LOCAL_HOUR }}
+          MAX_WORKERS: ${{ secrets.MAX_WORKERS }}
+          HEADLESS: "true"
+        run: |
+          echo "GOOGLE_SA_JSON_B64=${GOOGLE_SA_JSON_B64}" > .env
+          echo "RECGOV_USERNAME=${RECGOV_USERNAME}" >> .env
+          echo "RECGOV_PASSWORD=${RECGOV_PASSWORD}" >> .env
+          echo "SHEET_ID=${SHEET_ID}" >> .env
+          echo "FACILITY_TZ=${FACILITY_TZ}" >> .env
+          echo "DESIRED_LOCAL_HOUR=${DESIRED_LOCAL_HOUR}" >> .env
+          echo "MAX_WORKERS=${MAX_WORKERS}" >> .env
+          echo "HEADLESS=true" >> .env
+
+      - name: Run booking script
+        env:
+          GOOGLE_SA_JSON_B64: ${{ secrets.GOOGLE_SA_JSON_B64 }}
+          RECGOV_USERNAME: ${{ secrets.RECGOV_USERNAME }}
+          RECGOV_PASSWORD: ${{ secrets.RECGOV_PASSWORD }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          FACILITY_TZ: ${{ secrets.FACILITY_TZ }}
+          DESIRED_LOCAL_HOUR: ${{ secrets.DESIRED_LOCAL_HOUR }}
+          MAX_WORKERS: ${{ secrets.MAX_WORKERS }}
+        run: |
+          python scripts/daily_booking_playwright.py
